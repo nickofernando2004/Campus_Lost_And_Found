@@ -21,12 +21,12 @@ def report_found_item(
     Log a newly found item into the found_items table.
 
     Args:
-        item_name (str): Short name or title of the found item (e.g., 'Black Umbrella').
-        category (str): Item classification (e.g., 'Electronics', 'ID/Wallet', 'Personal').
+        item_name (str): Short name or title of the found item.
+        category (str): Item classification (e.g., Electronics, ID/Wallet, Personal).
         description (str): General physical details without revealing private proof markers.
-        location_found (str): Campus building, room, or landmark where the item was found.
+        location_found (str): Campus building or landmark where the item was found.
         reported_by (int): User ID of the student or admin logging the report.
-        date_found (str | None, optional): Date found (YYYY-MM-DD). Defaults to today's date.
+        date_found (str | None, optional): Date found (YYYY-MM-DD). Defaults to today.
 
     Returns:
         bool: True if the item is recorded successfully, False if validation fails.
@@ -36,7 +36,6 @@ def report_found_item(
     description = description.strip()
     location_found = location_found.strip()
 
-    # Validate that required descriptive fields are provided
     if not all([item_name, category, description, location_found]):
         print("Error: Item name, category, description, and location are all required.")
         return False
@@ -49,7 +48,6 @@ def report_found_item(
     conn = get_connection()
     cursor = conn.cursor()
 
-    # Insert the found item with default 'unclaimed' custody status
     cursor.execute(
         """
         INSERT INTO found_items (
@@ -68,10 +66,10 @@ def report_found_item(
 
 def list_items(include_claimed: bool = False) -> list[dict]:
     """
-    Retrieve found items from the catalog, joined with the reporter's username.
+    Retrieve found items from the catalog, joined with the reporter username.
 
     Args:
-        include_claimed (bool, optional): If False, returns only 'unclaimed' items.
+        include_claimed (bool, optional): If False, returns only unclaimed items.
             If True, returns all items regardless of status. Defaults to False.
 
     Returns:
@@ -121,7 +119,6 @@ def search_items(keyword: str) -> list[dict]:
     conn = get_connection()
     cursor = conn.cursor()
 
-    # Perform case-insensitive LIKE search across key item attributes
     cursor.execute(
         """
         SELECT f.item_id, f.item_name, f.category, f.description,
