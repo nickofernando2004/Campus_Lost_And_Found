@@ -2,8 +2,8 @@
 Main Command-Line Interface (CLI) Entry Point for the Campus Lost & Found System.
 
 Integrates database initialization, user authentication, found item reporting,
-keyword searching, student ownership claims, and admin claim verification into
-a unified, role-aware interactive terminal application.
+keyword searching, student ownership claims, admin claim verification, and
+administrative analytics reporting into a unified terminal application.
 """
 
 from src.database import init_db
@@ -15,6 +15,7 @@ from src.claims import (
     list_pending_claims,
     review_claim,
 )
+from src.reports import get_system_summary, get_top_locations
 
 
 def display_items(items: list[dict]) -> None:
@@ -38,13 +39,34 @@ def display_items(items: list[dict]) -> None:
         print(f"   Description: {item['description']} (Reported by: {item['reporter']})")
 
 
+def display_admin_report() -> None:
+    """
+    Display overall system metrics and top campus loss locations for admins.
+    """
+    summary = get_system_summary()
+    hotspots = get_top_locations()
+
+    print("\n=========================================")
+    print("   CAMPUS LOST & FOUND SUMMARY REPORT")
+    print("=========================================")
+    print(f"Registered Accounts : {summary['total_users']}")
+    print(f"Total Found Items   : {summary['total_items']}")
+    print(f"  - Unclaimed       : {summary['unclaimed_items']}")
+    print(f"  - Claimed         : {summary['claimed_items']}")
+    print(f"Pending Claims      : {summary['pending_claims']}")
+    print(f"Approved Claims     : {summary['approved_claims']}")
+
+    print("\nTop Campus Loss Locations:")
+    if not hotspots:
+        print("  No location data logged yet.")
+    else:
+        for idx, loc in enumerate(hotspots, start=1):
+            print(f"  {idx}. {loc['location_found']} ({loc['item_count']} item(s))")
+
+
 def user_session(user: dict) -> None:
     """
     Run the authenticated interactive menu loop tailored to the user's role.
-
-    Students can view/search found items, report found items, submit ownership
-    claims, and track their claim statuses. Admins additionally get options to
-    view full item history and approve/reject pending ownership claims.
 
     Args:
         user (dict): Authenticated user dictionary ('user_id', 'username', 'role').
@@ -59,6 +81,7 @@ def user_session(user: dict) -> None:
         if user["role"] == "admin":
             print("6. Review Pending Claims (Admin)")
             print("7. View All Items History (Admin)")
+            print("8. View Campus Summary & Hotspot Report (Admin)")
         print("0. Logout")
 
         choice = input("Select an option: ").strip()
@@ -125,6 +148,9 @@ def user_session(user: dict) -> None:
 
         elif choice == "7" and user["role"] == "admin":
             display_items(list_items(include_claimed=True))
+
+        elif choice == "8" and user["role"] == "admin":
+            display_admin_report()
 
         elif choice == "0":
             print("Logging out...")
