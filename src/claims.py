@@ -34,7 +34,7 @@ def submit_claim(item_id: int, claimant_id: int, proof_description: str) -> bool
     conn = get_connection()
     cursor = conn.cursor()
 
-    # Verify the target item exists and check its custody status
+    # Check if the target item exists and is still unclaimed
     cursor.execute(
         "SELECT item_name, status FROM found_items WHERE item_id = ?",
         (item_id,),
@@ -51,7 +51,7 @@ def submit_claim(item_id: int, claimant_id: int, proof_description: str) -> bool
         conn.close()
         return False
 
-    # Prevent duplicate pending claims by the same student on the same item
+    # Prevent duplicate pending claims from the same student on the same item
     cursor.execute(
         """
         SELECT claim_id FROM claims
@@ -64,7 +64,7 @@ def submit_claim(item_id: int, claimant_id: int, proof_description: str) -> bool
         conn.close()
         return False
 
-    # Record the new pending claim in the database
+    # Insert new pending claim record
     cursor.execute(
         """
         INSERT INTO claims (item_id, claimant_id, proof_description, claim_status)
@@ -81,7 +81,7 @@ def submit_claim(item_id: int, claimant_id: int, proof_description: str) -> bool
 
 def list_user_claims(claimant_id: int) -> list[dict]:
     """
-    Retrieve all ownership claims submitted by a specific student.
+    Retrieve all claims submitted by a specific student.
 
     Args:
         claimant_id (int): User ID of the claimant.
@@ -110,7 +110,7 @@ def list_user_claims(claimant_id: int) -> list[dict]:
 
 def list_pending_claims() -> list[dict]:
     """
-    Retrieve all pending ownership claims awaiting admin verification.
+    Retrieve all pending claims awaiting admin verification.
 
     Returns:
         list[dict]: Pending claims joined with item names and claimant usernames.
@@ -175,7 +175,7 @@ def review_claim(claim_id: int, decision: str) -> bool:
 
     reviewed_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    # Update the selected claim's status and review timestamp
+    # Update the target claim's status and review timestamp
     cursor.execute(
         """
         UPDATE claims
@@ -186,12 +186,12 @@ def review_claim(claim_id: int, decision: str) -> bool:
     )
 
     if decision == "approved":
-        # Mark the found item as claimed
+        # Mark the item as claimed in found_items
         cursor.execute(
             "UPDATE found_items SET status = 'claimed' WHERE item_id = ?",
             (claim["item_id"],),
         )
-        # Automatically reject competing pending claims on the same item
+        # Reject any other competing pending claims on the same item
         cursor.execute(
             """
             UPDATE claims
